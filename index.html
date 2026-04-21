@@ -14,8 +14,9 @@
   label { display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: .95rem; }
   .radio-group { display: flex; gap: 16px; }
   .radio-group label { font-weight: normal; display: flex; align-items: center; gap: 6px; cursor: pointer; }
-  .file-input-wrap { border: 2px dashed #b0c4de; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: border-color .2s; }
+  .file-input-wrap { border: 2px dashed #b0c4de; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
   .file-input-wrap:hover { border-color: #1a6fc4; }
+  .file-input-wrap.drag-over { border-color: #1a6fc4; background: #e8f2ff; }
   .file-input-wrap input { display: none; }
   .file-name { margin-top: 8px; color: #555; font-size: .9rem; }
   .btn { display: block; width: 100%; padding: 14px; background: #1a6fc4; color: #fff; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: 600; cursor: pointer; transition: background .2s; }
@@ -53,13 +54,13 @@
 
   <div class="section">
     <label>步驟 2：上傳填寫完成的 Word 座位表 <span class="badge">.docx</span></label>
-    <div class="file-input-wrap" onclick="document.getElementById('docxFile').click()">
+    <div class="file-input-wrap" id="dropZone" onclick="document.getElementById('docxFile').click()">
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#90a8c8" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="17 8 12 3 7 8"/>
         <line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
-      <div>點擊選擇 .docx 檔案</div>
+      <div>點擊或拖曳 .docx 檔案至此</div>
       <div class="file-name" id="fileName">尚未選擇檔案</div>
       <input type="file" id="docxFile" accept=".docx">
     </div>
@@ -153,11 +154,42 @@ function downloadBlankDocx() {
 }
 
 // ── UI 事件 ──────────────────────────────────────────────────────────────────
+function setFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.docx')) {
+    alert('請選擇 .docx 格式的 Word 檔案');
+    return;
+  }
+  // 把 File 塞進 input（供 convert() 讀取）
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById('docxFile').files = dt.files;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('convertBtn').disabled = false;
+}
+
 document.getElementById('docxFile').addEventListener('change', function() {
   const name = this.files[0] ? this.files[0].name : '尚未選擇檔案';
   document.getElementById('fileName').textContent = name;
   document.getElementById('convertBtn').disabled = !this.files[0];
 });
+
+(function() {
+  const zone = document.getElementById('dropZone');
+  zone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', function(e) {
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    setFile(file);
+  });
+})();
 
 function logMsg(msg) {
   const el = document.getElementById('log');
