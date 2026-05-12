@@ -1,0 +1,20 @@
+# 開發過程產生的分析輸出
+analyze_output.txt
+match_output.txt
+verify_output.txt
+col34_debug.txt
+excel_inspect.txt
+excel_inspect2.txt
+docx_color_output.txt
+test_room1_output.txt
+
+# 暫存的開發輔助腳本
+inspect_excel.py
+inspect_docx_color.py
+
+# Word 暫存檔
+~$*
+
+# Python
+__pycache__/
+*.pyc
