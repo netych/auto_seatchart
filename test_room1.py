@@ -76,20 +76,27 @@ def parse_docx(path):
             col += span
     return cells
 
-# ── 與 index.html processLines() 相同邏輯（v1.3）────────────────────────────
+# ── 與 index.html processLines() 相同邏輯（v1.4）────────────────────────────
 def process_lines(lines):
     if not lines:
-        return '', ''
+        return '', '', ''
     b = lines[0]
     c = ''
+    is_proxy = False
     for l in lines[1:]:
         l = l.strip()
         m = re.match(r'^[（(](.+)[）)]$', l)
         if m:
             c = m.group(1).strip()
+            is_proxy = True
         elif re.match(r'^[（(]', l):
             c = re.sub(r'^[（(]', '', l).rstrip('）)').strip()
-    return b, c
+            is_proxy = True
+        elif l:
+            c = l
+            is_proxy = False
+    e = b + c if (c and not is_proxy) else b
+    return b, c, e
 
 # ── Excel 解析（讀取 B、C、E 欄） ────────────────────────────────────────────
 def parse_xlsx(path):
@@ -154,7 +161,7 @@ def main():
             empty_word.append((key, excel_row, excel_b + excel_c, excel_e))
             continue
 
-        b, c = process_lines(lines)
+        b, c, e = process_lines(lines)
         tool_display = b + c
 
         ex = excel_rows.get(excel_row, {})

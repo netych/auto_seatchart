@@ -352,26 +352,37 @@ function parseDocx(xmlText) {
   return cells;
 }
 
-// ── 文字處理：出席委員 → B欄，代理人去括號 → C欄 ───────────────────────────
+// ── 文字處理 ─────────────────────────────────────────────────────────────────
+// 三種格式：
+//   單行            → b=人名, c='',    e=b
+//   兩行無括號      → b=單位, c=人名,  e=b+c
+//   人名+(代理人)   → b=人名, c=代理人去括號, e=b
+// E 欄邏輯：有 C 欄且 C 欄不是代理人（即格式為單位+人名）時，e=b+c；否則 e=b
 function processLines(lines) {
-  if (!lines.length) return { b: '', c: '' };
-  // 第1行：出席委員
+  if (!lines.length) return { b: '', c: '', e: '' };
   const b = lines[0];
-  // 其餘行：找括號行，去除括號後作為代理人；非括號行串接到 b 後（多行正文）
   let c = '';
+  let isProxy = false;
+
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i].trim();
     const m = l.match(/^[（(](.+)[）)]$/);
     if (m) {
-      c = m[1].trim();  // 去括號，代理人姓名
-    }
-    // 括號不完整（只開頭有括號但不成對）也嘗試去頭括號
-    else if (/^[（(]/.test(l)) {
+      c = m[1].trim();
+      isProxy = true;
+    } else if (/^[（(]/.test(l)) {
       c = l.replace(/^[（(]/, '').replace(/[）)]$/, '').trim();
+      isProxy = true;
+    } else if (l) {
+      // 無括號第2行 → 單位+人名格式
+      c = l;
+      isProxy = false;
     }
-    // 非括號行：屬於正文第二行，視為 b 的延續（與舊邏輯相同）
   }
-  return { b: b, c: c };
+
+  // E欄：單位+人名格式時顯示 b+c（單位＋人名），其他情況只顯示 b（人名）
+  const e = (c && !isProxy) ? b + c : b;
+  return { b, c, e };
 }
 
 // ── 主流程 ───────────────────────────────────────────────────────────────────
@@ -425,7 +436,7 @@ async function convert() {
 
       ws['B' + excelRow] = { v: processed.b, t: 's' };
       if (processed.c) ws['C' + excelRow] = { v: processed.c, t: 's' };
-      ws['E' + excelRow] = { v: processed.b, t: 's' };
+      if (processed.e) ws['E' + excelRow] = { v: processed.e, t: 's' };
 
       logMsg('   [' + key + '] → 行' + excelRow + ': ' + processed.b + (processed.c ? ' / ' + processed.c : ''));
       filled++;
